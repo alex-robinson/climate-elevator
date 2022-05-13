@@ -19,12 +19,29 @@ module climate_elevator
     end type
 
     private
-    public :: climate_elevator_class
+    public :: climate_elevator_set_var 
     public :: climate_elevator_init
-    public :: climate_elevator_update 
+    public :: climate_elevator_class
     public :: climate_elevator_end 
 
 contains
+    
+    subroutine climate_elevator_set_var(var,z_srf,ce)
+        ! Given 3D climate variable (ce) and current surface elevation (z_srf),
+        ! calculate the current variable consistent with this elevation (var). 
+
+        implicit none
+
+        real(wp), intent(OUT) :: var(:,:) 
+        real(wp), intent(IN)  :: z_srf(:,:) 
+        type(climate_elevator_class), intent(IN) :: ce
+
+        
+
+        return
+
+    end subroutine climate_elevator_set_var
+
     
     subroutine climate_elevator_init(ce,x,y,z)
         ! Initialize a climate_elevator variable with correct
@@ -42,7 +59,7 @@ contains
         integer :: ny
         integer :: nz
         
-        ! Define sizes 
+        ! Define vector sizes 
         nx = size(x) 
         ny = size(y) 
         nz = size(z) 
@@ -61,18 +78,6 @@ contains
         return
 
     end subroutine climate_elevator_init
-
-
-
-
-    subroutine climate_elevator_update()
-
-        implicit none
-
-
-        return
-
-    end subroutine climate_elevator_update
 
 
     subroutine climate_elevator_end(ce)
