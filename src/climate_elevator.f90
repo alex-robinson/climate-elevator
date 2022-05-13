@@ -36,13 +36,26 @@ contains
         real(wp), intent(IN)  :: z_srf(:,:) 
         type(climate_elevator_class), intent(IN) :: ce
 
+        ! Local variables 
+        integer :: i, j
+
+        ! Get grid sizes 
+
+        ! Loop over grid and calculate variable at given point
         
+        do j = 1, ce%ny 
+        do i = 1, ce%nx 
+
+            var(i,j) = interp_linear(x=ce%z,y=ce%v(i,j,:),xout=z_srf(i,j))
+
+        end do 
+        end do 
 
         return
 
     end subroutine climate_elevator_set_var
 
-    
+
     subroutine climate_elevator_init(ce,x,y,z)
         ! Initialize a climate_elevator variable with correct
         ! axes and variable dimensions. 
@@ -54,18 +67,13 @@ contains
         real(wp), intent(IN) :: y(:) 
         real(wp), intent(IN) :: z(:) 
         
-        ! Local variables 
-        integer :: nx
-        integer :: ny
-        integer :: nz
-        
-        ! Define vector sizes 
-        nx = size(x) 
-        ny = size(y) 
-        nz = size(z) 
+        ! Define axis lengths 
+        ce%nx = size(x) 
+        ce%ny = size(y) 
+        ce%nz = size(z) 
 
         ! First allocate climate elevator object
-        call climate_elevator_alloc(ce,nx,ny,nz)
+        call climate_elevator_alloc(ce,ce%nx,ce%ny,ce%nz)
 
         ! Next store axis information 
         ce%x = x 
@@ -131,6 +139,76 @@ contains
         return
 
     end subroutine climate_elevator_dealloc
+
+
+
+    ! ====== Subroutines to calculate the physics ==========
+
+    function interp_linear(x,y,xout) result(yout)
+        ! Interpolate y from ordered x to ordered xout positions
+
+        implicit none 
+ 
+        real(wp), intent(IN) :: x(:)
+        real(wp), intent(IN) :: y(:)
+        real(wp), intent(IN) :: xout
+        real(wp) :: yout 
+        integer :: i, j, n, nout 
+
+        n    = size(x) 
+
+        if (xout .lt. x(1)) then
+            yout = y(1)
+        else if (xout .gt. x(n)) then
+            yout = y(n)
+        else
+            do j = 1, n 
+                if (x(j) .ge. xout) exit 
+            end do
+
+            if (j .eq. 1) then 
+                yout = y(1) 
+            else if (j .eq. n+1) then 
+                yout = y(n)
+            else 
+                yout = interp_linear_internal(x(j-1:j),y(j-1:j),xout)
+            end if 
+        end if 
+
+        return 
+
+      end function interp_linear
+
+    ! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    !   Subroutine :  interp_linear_internal
+    !   Author     :  Alex Robinson
+    !   Purpose    :  Interpolates for the y value at the desired x value, 
+    !                 given x and y values around the desired point.
+    ! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    function interp_linear_internal(x,y,xout) result(yout)
+
+        implicit none
+
+        real(wp), intent(IN)  :: x(2), y(2), xout
+        real(wp) :: yout
+        real(wp) :: alph
+
+        if ( xout .lt. x(1) .or. xout .gt. x(2) ) then
+            write(*,*) "interp1: xout < x0 or xout > x1 !"
+            write(*,*) "xout = ",xout
+            write(*,*) "x0   = ",x(1)
+            write(*,*) "x1   = ",x(2)
+            stop
+        end if
+
+        alph = (xout - x(1)) / (x(2) - x(1))
+        yout = y(1) + alph*(y(2) - y(1))
+
+        return
+
+    end function interp_linear_internal
+
+
 
 
 end module climate_elevator
