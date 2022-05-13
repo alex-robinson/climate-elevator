@@ -46,7 +46,7 @@ include config/Makefile_climelev.mk
 yelmo-static: 
 		$(MAKE) -C $(YELMOROOT) yelmo-static parallel=$(parallel)
 
-test : $(objdir)/ncio.o
+test : $(objdir)/ncio.o $(climelev_libs)
 		$(FC) $(DFLAGS) $(FFLAGS) -o ./libclimelev/bin/test.x test.f90 \
 			$(LFLAGS) $(objdir)/ncio.o
 		@echo " "
