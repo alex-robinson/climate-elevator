@@ -10,12 +10,12 @@ module climate_elevator
     integer,  parameter :: wp = sp 
 
     type climate_elevator_class
-        integer  :: nx, ny, nz
-        real(wp), allocatable :: x(:)
-        real(wp), allocatable :: y(:)
-        real(wp), allocatable :: z(:)
-        real(wp), allocatable :: v(:,:,:) 
-
+        integer  :: np, nz
+        real(wp), allocatable :: id(:)      ! [np] ID number
+        real(wp), allocatable :: x(:)       ! [np] Representative x-location
+        real(wp), allocatable :: y(:)       ! [np] Representative y-location
+        real(wp), allocatable :: z(:)       ! [nz] Elevations
+        real(wp), allocatable :: v(:,:)     ! [np,nz] Variable values by point and elevation
     end type
 
     private
@@ -43,20 +43,14 @@ contains
 
         ! Loop over grid and calculate variable at given point
         
-        do j = 1, ce%ny 
-        do i = 1, ce%nx 
-
-            var(i,j) = interp_linear(x=ce%z,y=ce%v(i,j,:),xout=z_srf(i,j))
-
-        end do 
-        end do 
-
+        ! To do 
+        
         return
 
     end subroutine climate_elevator_set_var
 
 
-    subroutine climate_elevator_init(ce,x,y,z)
+    subroutine climate_elevator_init(ce,x,y,z,id)
         ! Initialize a climate_elevator variable with correct
         ! axes and variable dimensions. 
 
@@ -66,21 +60,53 @@ contains
         real(wp), intent(IN) :: x(:) 
         real(wp), intent(IN) :: y(:) 
         real(wp), intent(IN) :: z(:) 
-        
+        real(wp), intent(IN), optional :: id(:) 
+
+        ! Local variables
+        integer :: i 
+
+        ! Consistency checks
+        if (size(x,1) .ne. size(y,1)) then 
+            write(*,*) "climate_elevator_init:: Error: x and y vectors should have the same length."
+            write(*,*) "size(x): ", size(x,1) 
+            write(*,*) "size(y): ", size(y,1)
+            stop 
+        end if 
+
         ! Define axis lengths 
-        ce%nx = size(x) 
-        ce%ny = size(y) 
-        ce%nz = size(z) 
+        ce%np = size(x,1) 
+        ce%nz = size(z,1) 
 
         ! First allocate climate elevator object
-        call climate_elevator_alloc(ce,ce%nx,ce%ny,ce%nz)
+        call climate_elevator_alloc(ce,ce%np,ce%nz)
 
         ! Next store axis information 
         ce%x = x 
         ce%y = y 
         ce%z = z 
 
-        ! Set variable to zero everywhere to start 
+        if (present(id)) then 
+            if (size(id,1) .ne. ce%np) then 
+                write(*,*) "climate_elevator_init:: Error: id vector should have the same length as x and y."
+                write(*,*) "size(id): ", size(id,1) 
+                write(*,*) "np: ", ce%np
+                stop
+            end if 
+
+            ! Store point ids
+            ce%id = id 
+
+        else
+            ! No id vector provided, simply set numbered ids
+
+            do i = 1, ce%np 
+                ce%id = real(i,wp)
+            end do 
+
+        end if 
+
+
+        ! Set variable values to zero everywhere to start 
         ce%v = 0.0_wp 
 
         return
@@ -101,24 +127,23 @@ contains
 
     end subroutine climate_elevator_end
 
-    subroutine climate_elevator_alloc(ce,nx,ny,nz)
+    subroutine climate_elevator_alloc(ce,np,nz)
         ! Allocate (or reallocate) all variables 
 
         implicit none
 
         type(climate_elevator_class), intent(INOUT) :: ce 
-        integer, intent(IN) :: nx
-        integer, intent(IN) :: ny
+        integer, intent(IN) :: np
         integer, intent(IN) :: nz
         
         ! First deallocate the object 
         call climate_elevator_dealloc(ce)
 
         ! Next allocate to correct sizes
-        allocate(ce%x(nx))
-        allocate(ce%y(ny))
+        allocate(ce%x(np))
+        allocate(ce%y(np))
         allocate(ce%z(nz))
-        allocate(ce%v(nx,ny,nz))
+        allocate(ce%v(np,nz))
         
         return
 
